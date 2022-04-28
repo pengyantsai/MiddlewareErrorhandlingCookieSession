@@ -4,6 +4,7 @@ const app = express();
 const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const flash = require("connect-flash");
 app.set("view engine", "ejs");
 // middlewares
 app.use(express.static("public"));
@@ -15,6 +16,8 @@ app.use(
     saveUninitialized: false,
   })
 );
+
+app.use(flash());
 
 mongoose
   .connect("mongodb://localhost:27017/test", {
@@ -99,9 +102,10 @@ app.get("/getSignCookies", (req, res) => {
 */
 
 app.get("/", (req, res) => {
+  req.flash("success", "success for login");
   console.log(req.session);
   console.log(process.env.SECRET_KEY);
-  res.send("welcome to homepage");
+  res.send("welcome to homepage  " + req.flash("success"));
 });
 
 app.get("/verifyUser", (req, res) => {
