@@ -5,6 +5,9 @@ const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
 const flash = require("connect-flash");
+const bodyParser = require("body-parser");
+const User = require("./models/user");
+
 app.set("view engine", "ejs");
 // middlewares
 app.use(express.static("public"));
@@ -17,6 +20,7 @@ app.use(
   })
 );
 
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(flash());
 
 mongoose
@@ -120,6 +124,46 @@ app.get("/secret", (req, res) => {
     res.status(403).send("you are not allowed");
   }
 });
+/*
+app.get("/login", (req, res) => {
+  res.render("login");
+});
+
+app.get("/signup", (req, res) => {
+  res.render("signup");
+});
+
+app.post("/signup", (req, res, next) => {
+  let { username, password } = req.body;
+  let newUser = new User({ username, password });
+  try {
+    newUser
+      .save()
+      .then(() => {
+        res.send("data has been saved");
+      })
+      .catch((err) => {
+        res.send(err);
+      });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/login", async (req, res, next) => {
+  let { username, password } = req.body;
+  try {
+    let findUser = await User.findOne({ username });
+    if (findUser && findUser.password === password) {
+      res.render("secret");
+    } else {
+      res.send("password or username is incorrect");
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+*/
 
 app.get("/*", (req, res) => {
   res.status(404).send("404 Not Found");
