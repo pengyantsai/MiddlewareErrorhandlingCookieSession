@@ -7,6 +7,8 @@ const session = require("express-session");
 const flash = require("connect-flash");
 const bodyParser = require("body-parser");
 const User = require("./models/user");
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 
 app.set("view engine", "ejs");
 // middlewares
@@ -22,6 +24,14 @@ app.use(
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(flash());
+
+const requireLogin = (req, res, next) => {
+  if (!req.session.isVerified == true) {
+    res.redirect("login");
+  } else {
+    next();
+  }
+};
 
 mongoose
   .connect("mongodb://localhost:27017/test", {
@@ -111,7 +121,7 @@ app.get("/", (req, res) => {
   console.log(process.env.SECRET_KEY);
   res.send("welcome to homepage  " + req.flash("success"));
 });
-
+/*
 app.get("/verifyUser", (req, res) => {
   req.session.isVerified = true;
   res.send("you ara verifyUser");
@@ -119,12 +129,12 @@ app.get("/verifyUser", (req, res) => {
 
 app.get("/secret", (req, res) => {
   if (req.session.isVerified == true) {
-    res.send("this is my secret");
+    res.render("this is my secret");
   } else {
     res.status(403).send("you are not allowed");
   }
 });
-/*
+*/
 app.get("/login", (req, res) => {
   res.render("login");
 });
@@ -133,18 +143,40 @@ app.get("/signup", (req, res) => {
   res.render("signup");
 });
 
-app.post("/signup", (req, res, next) => {
+app.post("/signup", async (req, res, next) => {
   let { username, password } = req.body;
-  let newUser = new User({ username, password });
+
   try {
-    newUser
-      .save()
-      .then(() => {
-        res.send("data has been saved");
-      })
-      .catch((err) => {
-        res.send(err);
+    let foundUser = await User.findOne({ username });
+    if (foundUser) {
+      res.send("username has been signed");
+    } else {
+      bcrypt.genSalt(saltRounds, (err, salt) => {
+        if (err) {
+          next(err);
+        }
+        console.log(salt);
+        bcrypt.hash(password, salt, (err, hash) => {
+          if (err) {
+            next(err);
+          }
+          console.log(hash);
+          let newUser = new User({ username, password: hash });
+          try {
+            newUser
+              .save()
+              .then(() => {
+                res.send("data has been saved");
+              })
+              .catch((err) => {
+                res.send(err);
+              });
+          } catch (err) {
+            next(err);
+          }
+        });
       });
+    }
   } catch (err) {
     next(err);
   }
@@ -154,16 +186,29 @@ app.post("/login", async (req, res, next) => {
   let { username, password } = req.body;
   try {
     let findUser = await User.findOne({ username });
-    if (findUser && findUser.password === password) {
-      res.render("secret");
+    if (findUser) {
+      bcrypt.compare(password, findUser.password, (err, result) => {
+        if (err) {
+          next(err);
+        }
+        if (result === true) {
+          req.session.isVerified = true;
+          res.redirect("secret2");
+        } else {
+          res.send("username or password is incorrect");
+        }
+      });
     } else {
-      res.send("password or username is incorrect");
+      res.send("username or password is incorrect");
     }
   } catch (err) {
     next(err);
   }
 });
-*/
+
+app.get("/secret2", requireLogin, (req, res) => {
+  res.render("secret");
+});
 
 app.get("/*", (req, res) => {
   res.status(404).send("404 Not Found");
